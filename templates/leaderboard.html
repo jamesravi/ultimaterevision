@@ -1,0 +1,100 @@
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.8.0/css/bulma.min.css">
+<script defer src="https://use.fontawesome.com/releases/v5.3.1/js/all.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/timeago.js@4.0.1/dist/timeago.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/humanize-duration/3.21.0/humanize-duration.min.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/iframe-resizer/4.2.10/iframeResizer.contentWindow.min.js"></script>
+
+<script>
+function request(url, method, reload=true, callback=undefined) {
+	var xmlHttp = new XMLHttpRequest();
+	xmlHttp.onreadystatechange = function() {
+		if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
+		    if (reload) {
+			    location.reload();
+		    } else {
+		        callback(xmlHttp.responseText);
+		    }
+		};
+	}
+	xmlHttp.open(method, url, true);
+	xmlHttp.send(null);
+}
+
+window.onload = function() {
+    document.querySelectorAll(".rendered").forEach(function(item) {
+        var duration = humanizeDuration(item.innerHTML*1000);
+        duration = string.slice(0, string.indexOf(".")+4)+" seconds";
+    	item.innerHTML = duration;
+    });
+    document.querySelectorAll(".duration").forEach(function(item) {
+        var start = new Date(item.innerHTML)
+    	item.innerHTML = humanizeDuration(Date.now() - start).split(".")[0]+" seconds ago";
+    });
+}
+
+function setattribute(key, value) {
+    var url = new URL(window.location.href);
+	url.searchParams.delete(key);
+	url.searchParams.append(key, value);
+	window.location.href = url.href;
+}
+
+function like(attemptid, type) {
+    request("/vote/attempt/"+attemptid+"?type="+type, "GET");
+}
+</script>
+
+<span>Sort by: </span>
+<button class="button" onclick="setattribute('sortby', 'marks')">Marks</button>
+<button class="button" onclick="setattribute('sortby', 'timetaken')">Time taken</button>
+<button class="button" onclick="setattribute('sortby', 'timestarted')">Time started</button>
+<button class="button" onclick="setattribute('sortby', 'votes')">Votes</button>
+
+<br><br>
+
+<span>View: </span>
+<button class="button" onclick="setattribute('publicorprivate', 'public')">Public</button>
+<button class="button" onclick="setattribute('publicorprivate', 'private')">Private (only users you follow)</button>
+
+<br><br>
+
+<table class="table is-bordered is-fullwidth">
+    <tr>
+        <th></th>
+        <th>Username</th>
+        <th>Time taken</th>
+        <th>Time of attempt</th>
+        <th>Marks gained</th>
+        <th>Votes</th>
+    </tr>
+    {% for attempt in attempts %}
+    <tr>
+        <td>
+            <a target="_parent" href="/attempt/{{attempt.attemptid}}">
+                <span class="icon" style="color: #7a7a7a;"><i class="fas fa-eye"></i></span>
+            </a>
+            <a onclick="like({{attempt.attemptid}}, 'like');">
+                <span class="icon" style="
+                    {% if not attempt.liked %}
+                    color: #7a7a7a;
+                    {% endif %}
+                "><i class="fas fa-thumbs-up"></i></span>
+            </a>
+            <a onclick="like({{attempt.attemptid}}, 'dislike');">
+                <span class="icon" style="
+                    {% if not attempt.disliked %}
+                    color: #7a7a7a;
+                    {% endif %}
+                "><i class="fas fa-thumbs-down"></i></span>
+            </a>
+        </td>
+        <td>{{attempt.user.username}}</td>
+        <td class="rendered">{{attempt.timetaken}}</td>
+        <td class="duration">{{attempt.starttime}}</td>
+        <td>{{attempt.marks}}</td>
+        <td>{{attempt.votes|round|int}}</td>
+    </tr>
+    {% endfor %}
+</table>

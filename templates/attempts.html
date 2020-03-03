@@ -1,0 +1,63 @@
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.8.0/css/bulma.min.css">
+<script defer src="https://use.fontawesome.com/releases/v5.3.1/js/all.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/iframe-resizer/4.2.10/iframeResizer.contentWindow.min.js"></script>
+
+{% macro show_attempt(attempt) %}
+    <a href="/profile/{{attempt.userid}}">{{attempt.user.username}}</a>
+    <i class="need_to_be_rendered" datetime="{{attempt.starttime}}"></i>{% if attempt.timetaken != None %};{% endif %}
+    {% if attempt.timetaken != None %}
+        <i class="duration">{{attempt.timetaken}}</i>;
+        <i>{{attempt.marks}} {% if attempt.marks == 1 %}mark{% else %}marks{% endif %}</i>
+    {% endif %}
+    </br>
+    <button class="button" onclick="window.top.location.href = '/attempt/'+{{attempt.attemptid}}">View attempt</button>
+    </br>
+{% endmacro %}
+
+<script src="https://cdn.jsdelivr.net/npm/timeago.js@4.0.1/dist/timeago.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/humanize-duration/3.21.0/humanize-duration.min.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/iframe-resizer/4.2.10/iframeResizer.contentWindow.min.js"></script>
+
+<script>
+window.onload = function() {
+    timeago.render(document.querySelectorAll(".need_to_be_rendered"));
+    document.querySelectorAll(".duration").forEach(function(item) {
+    	item.innerHTML = humanizeDuration(item.innerHTML*1000);
+    });
+}
+
+function sortby(item) {
+    var url = new URL(window.location.href);
+	url.searchParams.delete("sortby");
+	url.searchParams.append("sortby", item);
+	window.location.href = url.href;
+}
+</script>
+
+<h1 class="title">Attempts</h1>
+
+<span>Sort by: </span>
+<button class="button" onclick="sortby('marks')">Marks</button>
+<button class="button" onclick="sortby('timetaken')">Time taken</button>
+<button class="button" onclick="sortby('timestarted')">Time started</button>
+<button class="button" onclick="sortby('votes')">Votes</button>
+
+<br><br>
+
+<h2 class="subtitle is-4">Completed</h2>
+{% for useranswer, attempts in completed.items() %}
+    <h3 class="subtitle is-5">{{ useranswer }}</h3>
+    {% for attempt in attempts %}
+        {{ show_attempt(attempt) }}
+    {% endfor %}
+    <br>
+{% endfor %}
+
+<br>
+
+<h2 class="subtitle is-4">In progress</h2>
+{% for attempt in inprogress %}
+    {{ show_attempt(attempt) }}
+{% endfor %}

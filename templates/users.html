@@ -1,0 +1,27 @@
+{% include "head.html" %}
+
+<script src="https://cdn.jsdelivr.net/npm/timeago.js@4.0.1/dist/timeago.min.js"></script>
+
+<script>
+window.onload = function() {
+    timeago.render(document.querySelectorAll(".need_to_be_rendered"));
+}
+</script>
+
+<section class="section">
+    <div class="container">
+        <h1 class="title">Users</h1>
+        <table class="table is-bordered">
+        	<tr>
+        		<th>Username</th>
+        		<th>Time signed up</th>
+        	</tr>
+        	{% for auser in users %}
+        	<tr>
+        		<td><a href="\profile\{{auser.userid}}" {% if auser.isbanned and user.isadmin %}style="text-decoration: line-through;"{% endif %}>{{auser.username}}{% if auser.userid == user.userid %} (you){% endif %}</a></td>
+        		<td class="need_to_be_rendered" datetime="{{auser.timesignedup}}"></td>
+        	</tr>
+        	{% endfor %}
+        </table>
+    </div>
+</section>

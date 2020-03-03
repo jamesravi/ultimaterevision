@@ -1,0 +1,124 @@
+{% include "head.html" %}
+
+<script src="https://cdn.jsdelivr.net/npm/timeago.js@4.0.1/dist/timeago.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/humanize-duration/3.21.0/humanize-duration.min.js"></script>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Wikiki/bulma-slider@1.0.0/dist/bulma-slider.min.css">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/iframe-resizer/4.2.10/iframeResizer.min.js"></script>
+
+<script>
+function request(url, method, reload=true, callback=undefined) {
+	var xmlHttp = new XMLHttpRequest();
+	xmlHttp.onreadystatechange = function() {
+		if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
+		    if (reload) {
+			    location.reload();
+		    } else {
+		        callback(xmlHttp.responseText);
+		    }
+		};
+	}
+	xmlHttp.open(method, url, true);
+	xmlHttp.send(null);
+}
+
+window.onload = function() {
+    timeago.render(document.querySelectorAll(".need_to_be_rendered"));
+    document.querySelectorAll(".duration").forEach(function(item) {
+    	item.innerHTML = humanizeDuration(item.innerHTML*1000);
+    });
+    iFrameResize({}, "#display")
+}
+
+function like(type) {
+    request("/vote/attempt/{{attempt.attemptid}}?type="+type, "GET");
+}
+
+{% if user.userid == attempt.userid %}
+function showvalue(value) {
+    var text
+    if (value == 1) {
+        text = "Give 1 mark"
+    } else {
+        text = "Give "+value+" marks"
+    }
+    document.getElementById("givemarksbutton").innerHTML = text;
+}
+
+function submitmark() {
+    request("/setmark/{{attempt.attemptid}}/"+document.getElementById("marks").value, "GET", false, function() {
+       alert("Successfully changed mark")
+    });
+}
+{% endif %}
+</script>
+
+<section class="section">
+    <div class="container">
+        <h1 class="title">Attempt for question number {{attempt.questionid}}, revision number {{attempt.revisionid}}</h1>
+
+        <p><b>Username: </b><a href="/profile/{{attempt.userid}}">{{attempt.user.username}}</a></p>
+        <p><b>Time of attempt: </b><span class="need_to_be_rendered" datetime="{{attempt.starttime}}"></span></p>
+        {% if attempt.timetaken != None %}
+            <p><b>Time taken: </b><span class="duration">{{attempt.timetaken}}</span></p>
+            <p><b>Answer given: </b>{{attempt.useranswers}}</p>
+            <b>
+                {% if attempt.marks == attempt.maxmarks %}
+                    Correct,
+                {% elif attempt.marks == 0 %}
+                    Incorrect,
+                {% else %}
+                    Partially correct,
+                {% endif %}
+                {{attempt.marks}}
+                {% if attempt.marks == 1 %}
+                    mark
+                {% else %}
+                    marks
+                {% endif %}
+                 out of {{attempt.maxmarks}}
+            </b>
+        {% else %}
+            <b>Attempt in progress</b>
+        {% endif %}
+
+        </br></br>
+
+        {% if user.userid == attempt.userid %}
+        <b>Marks:</b>
+        </br>
+        <input id="marks" class="slider is-fullwidth" oninput="showvalue(this.value)" class="slider is-fullwidth" max="1" value="1" type="range">
+        <button id="givemarksbutton" class="button" onclick="submitmark()">Give 1 mark</button>
+        </br></br>
+        {% endif %}
+
+        <a onclick="like('like');">
+            <span class="icon" style="
+                {% if not attempt.liked %}
+                color: #7a7a7a;
+                {% endif %}
+            "><i class="fas fa-thumbs-up"></i></span>
+        </a>
+        <a onclick="like('dislike');">
+            <span class="icon" style="
+                {% if not attempt.disliked %}
+                color: #7a7a7a;
+                {% endif %}
+            "><i class="fas fa-thumbs-down"></i></span>
+        </a>
+        <a onclick="like('report');">
+            <span class="icon" style="
+                {% if not attempt.reported %}
+                color: #7a7a7a;
+                {% endif %}
+            "><i class="fas fa-flag"></i></span>
+        </a>
+
+        </br></br>
+
+        <h2 class="subtitle">Comments</h2>
+
+        <iframe id="display" src="/comments/attempt/{{attempt.attemptid}}" style="width: 100%"></iframe>
+    </div>
+</section>

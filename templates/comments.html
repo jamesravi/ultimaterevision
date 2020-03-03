@@ -1,0 +1,165 @@
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.8.0/css/bulma.min.css">
+<script defer src="https://use.fontawesome.com/releases/v5.3.1/js/all.js"></script>
+
+<link rel="stylesheet" href="https://unpkg.com/easymde/dist/easymde.min.css">
+<script src="https://unpkg.com/easymde/dist/easymde.min.js"></script>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<script src="/bundle.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/2.0.3/purify.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/timeago.js@4.0.1/dist/timeago.min.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/iframe-resizer/4.2.10/iframeResizer.contentWindow.min.js"></script>
+
+<style>
+.CodeMirror,
+.CodeMirror-scroll {
+    min-height: 0px;
+    max-height: 200px;
+}
+
+.highlighted {
+    border-style: dotted;
+}
+
+.icon:hover {
+    color: #494949 !important;
+}
+</style>
+<script>
+var replytocommentid;
+
+function request(url, method, reload=true, callback=undefined) {
+	var xmlHttp = new XMLHttpRequest();
+	xmlHttp.onreadystatechange = function() {
+		if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
+		    if (reload) {
+			    location.reload();
+		    } else {
+		        callback(xmlHttp.responseText);
+		    }
+		};
+	}
+	xmlHttp.open(method, url, true);
+	xmlHttp.send(null);
+}
+
+function post(url, data, callback) {
+	var xhr = new XMLHttpRequest();
+	xhr.open("POST", url, true);
+	xhr.setRequestHeader("Content-Type", "application/json");
+	xhr.onreadystatechange = function () {
+		if (xhr.readyState === 4 && xhr.status === 200) {
+			callback(JSON.parse(xhr.responseText));
+		}
+	};
+	var data = JSON.stringify(data);
+	xhr.send(data);
+}
+
+window.onload = function() {
+    submitcommentbox = new EasyMDE({element: document.getElementById("value"), placeholder: "Add a comment...", previewRender: function(plainText){return md.render(plainText)}});
+    Array.from(document.getElementsByClassName("commenttext")).forEach(function(item){
+        item.innerHTML = DOMPurify.sanitize(md.render(item.innerHTML));
+    });
+    timeago.render(document.querySelectorAll('.need_to_be_rendered'));
+}
+
+function submitcomment() {
+    var data = {"content":submitcommentbox.value()}
+    if (replytocommentid != undefined) {
+        data["replytocommentid"] = replytocommentid
+    }
+    post(window.location.href, data, function(item) {
+        if (item["valid"]) {
+            window.location.reload();
+        } else {
+            alert("An error occured: "+item["message"])
+        }
+    });
+}
+
+function reply(button, commentid) {
+    var comment = button.parentElement.parentElement.parentElement
+    var username = comment.getElementsByTagName("a")[0].innerHTML
+    var text = "Replying to "+username+"'s comment (highlighted below)"
+    Array.from(document.getElementsByClassName("comment")).forEach(function(item){
+        if (item != comment) {
+            item.classList.remove("highlighted");
+            button.children[0].style.color = "#7a7a7a"
+        }
+    });
+    if (comment.classList.contains("highlighted")) {
+        comment.classList.remove("highlighted")
+        button.children[0].style.color = "#7a7a7a";
+        document.getElementById("replytext").innerHTML = ""
+        replytocommentid = undefined
+    } else {
+        comment.classList.add("highlighted")
+        button.children[0].style.color = "#3273dc";
+        document.getElementById("replytext").innerHTML = text
+        replytocommentid = commentid
+    }
+}
+
+function deletecomment(commentid) {
+    request(window.location.origin+"/deletecomment/"+commentid, "DELETE");
+}
+
+function like(commentid, type) {
+    request("/vote/comment/"+commentid+"?type="+type, "GET");
+}
+</script>
+
+<textarea id="value"></textarea>
+<p id="replytext"></p>
+<input class="button" type="button" value="Submit comment" onclick="submitcomment()"></input>
+<br>
+{% for comment, depth in comments %}
+    <br>
+
+    <article class="media">
+      <div class="media-content comment" style="padding-left: {{50*depth}}px;">
+        <div class="content">
+            <a href="/profile/{{comment.user.userid}}">{{comment.user.username}}</a>&nbsp;
+            <b>{{comment.votes}}</b>&nbsp;
+            <i class="need_to_be_rendered" datetime="{{comment.timewritten}}"></i>
+            <p class="commenttext">{{comment.content}}</p>
+        </div>
+        <nav class="level is-mobile">
+          <div class="level-left">
+            <a class="level-item" onclick="like({{comment.commentid}}, 'like');">
+                <span class="icon is-small" style="
+                    {% if not comment.liked %}
+                    color: #7a7a7a;
+                    {% endif %}
+                "><i class="fas fa-thumbs-up"></i></span>
+            </a>
+            <a class="level-item" onclick="like({{comment.commentid}}, 'dislike');">
+                <span class="icon is-small" style="
+                    {% if not comment.disliked %}
+                    color: #7a7a7a;
+                    {% endif %}
+                "><i class="fas fa-thumbs-down"></i></span>
+            </a>
+            <a class="level-item" onclick="reply(this, {{comment.commentid}});">
+                <span class="icon is-small" style="color: #7a7a7a;"><i class="fas fa-reply"></i></span>
+            </a>
+            <a class="level-item" onclick="like({{comment.commentid}}, 'report');">
+                <span class="icon is-small" style="
+                    {% if not comment.reported %}
+                    color: #7a7a7a;
+                    {% endif %}
+                "><i class="fas fa-flag"></i></span>
+            </a>
+            {% if comment.userid == user.userid or user.isadmin %}
+                <a class="level-item" onclick="deletecomment({{comment.commentid}});">
+                    <span class="icon is-small" style="color: #7a7a7a;"><i class="fas fa-times-circle"></i></span>
+                </a>
+            {% endif %}
+          </div>
+        </nav>
+      </div>
+    </article>
+{% endfor %}

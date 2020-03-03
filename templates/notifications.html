@@ -1,0 +1,124 @@
+{% include "head.html" %}
+
+<style>
+ul {
+  list-style-type: none !important;
+}
+</style>
+
+<script>
+function request(url, method, data=null, reload=true, callback=undefined) {
+	var xmlHttp = new XMLHttpRequest();
+	xmlHttp.onreadystatechange = function() {
+		if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
+		    if (reload) {
+			    location.reload();
+		    } else {
+		        callback(xmlHttp.responseText);
+		    }
+		};
+	}
+	xmlHttp.open(method, url, true);
+	xmlHttp.send(data);
+}
+
+window.onload = function() {
+    document.querySelectorAll("input[name=commentnotification]").forEach(function(item) {
+    	item.checked = false
+    })
+}
+
+function readnotifications() {
+    var items = []
+    document.querySelectorAll("input[name=commentnotification]:checked").forEach(function(item) {
+    	items.push(item.value);
+    })
+    request("", "POST", items.join(","))
+}
+
+function togglecheckboxes() {
+    var toggle = !document.querySelectorAll("input[name=commentnotification]")[0].checked
+    document.querySelectorAll("input[name=commentnotification]").forEach(function(item) {
+    	item.checked = toggle
+    })
+    if (toggle) {
+        document.getElementById("toggle").value = "Unselect all"
+    } else {
+        document.getElementById("toggle").value = "Select all"
+    }
+}
+
+function gotonotification(commentid, url) {
+    if (document.querySelector(".is-active").children[0].innerHTML == "Unread") {
+        request("", "POST", commentid, reload=false, callback=function(item){
+            window.location.href = url;
+        });
+    } else {
+        window.location.href = url;
+    }
+}
+
+function toggletag(element) {
+    document.querySelectorAll(".tab").forEach(function(e) {
+        e.classList.remove("is-active");
+    });
+    element.parentNode.classList.add("is-active");
+    document.querySelectorAll(".tabcontent").forEach(function(e) {
+        e.style.display = "none";
+    });
+    document.getElementById(element.innerHTML).style.display = "block";
+}
+</script>
+
+<section class="section">
+    <div class="container">
+        <h1 class="title">Notifications</h1>
+
+        <div class="field">
+            <div class="control">
+                <button class="button" type="button" onclick="readnotifications()">Mark marked as read/unread</button>
+                <button class="button" type="button" id="toggle" onclick="togglecheckboxes()">Select all</button>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <ul>
+                <li class="tab is-active"><a onclick="toggletag(this);">Unread</a></li>
+                <li class="tab"><a onclick="toggletag(this);">Read</a></li>
+            </ul>
+        </div>
+
+        {% for key in log.keys()|sort|reverse %}
+            <div class="tabcontent" id="{{key}}" {% if key != "Unread" %}style="display: none;"{% endif %}>
+            {% for date, headeritems in log[key].items()|sort|reverse %}
+                <h2 class="subtitle">{{date}}</h2>
+                {% for username, items in headeritems.items() %}
+                    <h3>{{username}} left {{items|length}} comments</h3>
+                    <div class="content">
+                        <ul>
+                            {% for item in items %}
+                                <li>
+                                    <input type="checkbox" name="commentnotification" value="{{item.commentid}}">
+                                    <a href="#" onclick="gotonotification('{{item.commentid}}',
+                                    {% if item.questionid != None %}
+                                        '/viewquestion/{{item.questionid}}/{{item.revisionid}}')">Question {{item.questionid}} (revision {{item.revisionid}})
+                                    {% elif item.followinguserid != None and item.followinguserid %}
+                                        '/profile/{{item.userid}}')">{{item.follower.username}}</a> followed <a href="#" onclick="gotonotification('{{item.commentid}}', '/profile/{{item.followinguserid}}')">{{item.followered.username}}
+                                    {% elif item.attemptid != None and item.attemptid %}
+                                        '/attempt/{{item.attemptid}}')">Attempt by {{item.user.username}} on question {{item.attempt.questionid}} (revision {{item.attempt.revisionid}})
+                                    {% elif item.profileid != None %}
+                                        '/profile/{{item.profileid}}')">User {{item.profile.username}}
+                                    {% else %}
+                                        {{0/0}} {# {{item}} #}
+                                    {% endif %}
+                                    </a>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endfor %}
+            {% endfor %}
+            </div>
+        {% endfor %}
+    </div>
+</section>

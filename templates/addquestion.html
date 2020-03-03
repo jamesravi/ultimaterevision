@@ -1,0 +1,202 @@
+{% include "head.html" %}
+
+<link rel="stylesheet" href="https://unpkg.com/easymde/dist/easymde.min.css">
+<script src="https://unpkg.com/easymde/dist/easymde.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.1.0/papaparse.min.js"></script>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<script src="/bundle.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/2.0.3/purify.min.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/iframe-resizer/4.2.10/iframeResizer.contentWindow.min.js"></script>
+
+<style>
+.CodeMirror,
+.CodeMirror-scroll {
+    max-height: 10%;
+}
+</style>
+
+<script>
+function post(url, data) {
+	var xhr = new XMLHttpRequest();
+	xhr.open("POST", url, true);
+	xhr.setRequestHeader("Content-Type", "application/json");
+	xhr.onreadystatechange = function () {
+		if (xhr.readyState === 4 && xhr.status === 200) {
+			var json = JSON.parse(xhr.responseText);
+			if (json["isvalid"] == true) {
+				{% if rows %}
+				var nextrevision = json["nextrevision"]
+				top.location.href = window.location.href.split("/").slice(0, -1).join("/") + "/" + nextrevision
+				{% else %}
+				window.location.reload();
+				{% endif %}
+			} else {
+				alert(json["message"]);
+			}
+		}
+	};
+	var data = JSON.stringify(data);
+	xhr.send(data);
+}
+
+window.onload = function() {
+    if (window != window.top) {
+        document.getElementsByTagName("nav")[0].outerHTML = ""
+        document.getElementsByTagName("section")[0].outerHTML = document.getElementsByTagName("section")[0].children[0].innerHTML
+    }
+
+    valueeditor = new EasyMDE({element: document.getElementById("value"), previewRender:function(plainText){return md.render(plainText)}});
+    bulk = new EasyMDE({element: document.getElementById("bulk")});
+	table = document.getElementById("myTable");
+
+	formSubmitting = false;
+    window.addEventListener("beforeunload", function (e) {
+        if (formSubmitting || (valueeditor.value().trim() == "" && bulk.value().trim() == "" && document.getElementById("tag").value.trim() == "")) {
+            return undefined;
+        }
+
+        var confirmationMessage = "This page is asking you to confirm that you want to leave - data you have entered may not be saved.";
+
+        (e || window.event).returnValue = confirmationMessage; //Gecko + IE
+        return confirmationMessage; //Gecko + Webkit, Safari, Chrome etc.
+    });
+}
+
+function addrow(tag, value) {
+	var row = table.insertRow(-1);
+
+	var cell0 = row.insertCell(0);
+	var cell1 = row.insertCell(1);
+	var cell2 = row.insertCell(2);
+
+	cell0.innerHTML = "<button class=\"button is-link is-danger\" type=\"button\" onclick=\"deleterow(this)\">Delete Row</button>"
+	cell1.innerHTML = tag;
+	cell2.innerHTML = value;
+}
+
+function addnormalrow() {
+    addrow(document.getElementById("tag").value, valueeditor.value())
+	document.getElementById("tag").value = "";
+	valueeditor.value("")
+}
+
+function deleterow(e) {
+	var i = e.parentNode.parentNode.rowIndex;
+	if (confirm("Are you sure you want to delete this row?")) {
+		table.deleteRow(i);
+	}
+}
+
+function submitform() {
+	if (confirm("Are you sure you want to submit this question?") == false) {
+		return
+	}
+	var rows = [];
+	Array.from(table.children[0].children).forEach(function(rowhtml) {
+		row = [];
+		Array.from(rowhtml.children).forEach(function(itemhtml) {
+			row.push(itemhtml.innerHTML);
+		});
+		rows.push(row.slice(1));
+	});
+	rows = rows.slice(1);
+	formSubmitting = true;
+	post("", rows);
+}
+
+function addbulk() {
+    var results = Papa.parse(bulk.value());
+    var error = false;
+    results.data.forEach(function(row) {
+        if (row.length == 2) {
+            addrow(row[0].trim(), row[1].trim());
+        } else {
+            error = true;
+        }
+    })
+    var message = "An error occured, so some rows may have not been added. Error message: \""
+    if (results.errors.length > 0) {
+        message += results.errors[0].message
+        error = true;
+    } else if (error) {
+        message += "Some rows didn't have two fields for key and value - check that a proper delimitter has been used. (e.g. comma)"
+    }
+    message +=  "\""
+    if (error) {
+        alert(message)
+    } else {
+        bulk.value("")
+    }
+}
+</script>
+
+<section class="section">
+    <div class="container">
+        <h1 class="title">
+        {% if rows %}
+        Edit a question
+        {% else %}
+        Add a question
+        {% endif %}
+        </h1>
+
+        {% include "flashedmessages.html" %}
+
+        <form>
+        	<table id="myTable" class="table is-bordered">
+        		<tr>
+        			<th></th>
+        			<th>Tag</th>
+        			<th>Value</th>
+        		</tr>
+        		{% if rows %}
+        			{% for tag, value in rows.items() %}
+        			<tr>
+        				<td><button class="button is-link is-danger" type="button" onclick="deleterow(this)">Delete Row</button></td>
+        				<td>{{ tag }}</td>
+        				<td>{{ value }}</td>
+        			</tr>
+        			{% endfor %}
+        		{% endif %}
+        	</table>
+
+            <h2 class="subtitle">Add tags</h2>
+            <div class="field">
+                <label class="label">Tag</label>
+                <div class="control">
+                	<input class="input" list="tags" name="tag" id="tag">
+                    <datalist id="tags">
+                		{% for tag in tags %}
+                			<option value="{{ tag }}"></option>
+                		{% endfor %}
+                    </datalist>
+                </div>
+            </div>
+
+            <div class="field">
+                <label class="label">Value</label>
+                <div class="control">
+                    <div class="content">
+                	    <textarea id="value" style="width: 100%; min-height:300px"></textarea>
+                    </div>
+                </div>
+                <button class="button is-link is-light" onclick="addnormalrow()" type="button">Add Tag + Value</button>
+            </div>
+
+        	<h2 class="subtitle">Bulk add tags</h2>
+
+            <div class="field">
+                <div class="control">
+        	        <textarea id="bulk" style="width: 100%; min-height:300px"></textarea>
+                </div>
+                <button class="button is-link is-light" onclick="addbulk()" type="button">Add tags and values in bulk</button>
+            </div>
+
+            <div class="control">
+                <button class="button is-link" onclick="submitform()" type="button">Submit Question</button>
+            </div>
+        </form>
+    </div>
+</section>

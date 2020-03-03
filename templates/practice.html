@@ -1,0 +1,57 @@
+{% include "head.html" %}
+
+<style>
+html, body {
+    margin: 0;
+    height: 100%;
+}
+
+iframe {
+    width: 1px;
+    min-width: 100%;
+}
+</style>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/iframe-resizer/4.2.10/iframeResizer.min.js"></script>
+
+<script>
+window.onload = function() {
+    questionids = getCookieValue("questioncache").split(".");
+    document.getElementById("display").src = "/attemptquestion/"+questionids[0];
+    iFrameResize({}, "#display")
+    document.getElementsByTagName("iframe")[0].iFrameResizer.resize();
+}
+
+function loadnextquestion() {
+    document.getElementById("nextquestion").disabled = true;
+    questionids.shift();
+    setCookie("questioncache", questionids.join("."), 20*365)
+    if (questionids[0] != undefined) {
+        document.getElementById("display").src = "/attemptquestion/"+questionids[0];
+        document.getElementsByTagName("iframe")[0].iFrameResizer.resize();
+    } else {
+        window.location.href = window.location.origin+"/practice";
+    }
+}
+
+var eventMethod = window.addEventListener ? "addEventListener" : "attachEvent";
+var eventer = window[eventMethod];
+var messageEvent = eventMethod == "attachEvent" ? "onmessage" : "message";
+
+eventer(messageEvent, function(e) {
+    var key = e.message ? "message" : "data";
+    var data = e[key];
+    if (data.constructor.name == "Object") {
+        document.getElementById("nextquestion").disabled = false;
+    };
+}, false);
+</script>
+
+<body>
+    <section class="section">
+        <div class="container">
+            <iframe id="display" src=""></iframe>
+            <button class="button" id="nextquestion" onclick="loadnextquestion()" disabled>Next question</button>
+        </div>
+    </section>
+</body>

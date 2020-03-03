@@ -1,0 +1,281 @@
+{% include "head.html" %}
+
+<script>
+function request(url, method, reload=true, callback=undefined) {
+	var xmlHttp = new XMLHttpRequest();
+	xmlHttp.onreadystatechange = function() {
+		if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
+		    if (reload) {
+			    location.reload();
+		    } else {
+		        callback(xmlHttp.responseText);
+		    }
+		};
+	}
+	xmlHttp.open(method, url, true);
+	xmlHttp.send(null);
+}
+
+{% if user.isadmin %}
+function deletequestion(item, type) {
+    var message = ""
+    if (type) {
+        message = "Delete this revision?"
+    } else {
+        message = "Delete all revisions before this one?"
+    }
+	if (confirm(message)) {
+		url = "deletequestion" + item.parentElement.parentElement.getElementsByTagName("a")[0].href.split("viewquestion")[1]
+        request(url, "DELETE")
+	}
+}
+
+function verifyquestion(item, type) {
+    var message = ""
+    if (type) {
+        message = "Deverify this revision?"
+    } else {
+        message = "Verify this revision?"
+    }
+	if (confirm(message)) {
+		url = "verifyquestion" + item.parentElement.parentElement.getElementsByTagName("a")[0].href.split("viewquestion")[1]
+        request(url, "GET")
+	}
+}
+
+function lockquestionfromediting(item, type) {
+    var message = ""
+    if (type) {
+        message = "Unlock this question from editing?"
+    } else {
+        message = "Lock this question from editing?"
+    }
+	if (confirm(message)) {
+		url = "lockfromediting/" + item
+        request(url, "GET")
+	}
+}
+{% endif %}
+
+function deleterow(e, confirmdelete=true) {
+	var i = e.parentNode.parentNode.rowIndex;
+	var confirmed = true;
+	if (confirmdelete) {
+	    confirmed = confirm("Are you sure you want to delete this row?")
+	} else {
+	    var tag = e.parentNode.parentNode.querySelectorAll("td")[1].innerText
+	    var value = e.parentNode.parentNode.querySelectorAll("td")[2].innerText
+	    addrow("selected", tag, value, "Delete Row")
+	}
+	if (confirmed) {
+		e.parentNode.parentNode.parentNode.parentNode.deleteRow(i);
+	}
+}
+
+function addrow(iditem, tag, value, buttontext="Delete Row", confirmdelete="true") {
+    var table = document.getElementById(iditem).getElementsByTagName("tbody")[0];
+	var row = table.insertRow(-1);
+
+	var cell0 = row.insertCell(0);
+	var cell1 = row.insertCell(1);
+	var cell2 = row.insertCell(2);
+
+	cell0.innerHTML = "<input type=\"button\" value=\""+buttontext+"\" onclick=\"deleterow(this, "+confirmdelete+")\"></input>"
+	cell1.innerHTML = tag;
+	cell2.innerHTML = value;
+}
+
+function addresults(results) {
+    document.getElementById("found").getElementsByTagName("tbody")[0].innerHTML = ""
+    results = JSON.parse(results)
+    results.forEach(function(item) {
+        addrow("found", item[0], item[1], "Select Row", "false")
+    })
+}
+
+function search() {
+    var tag = document.getElementById("tag").value.trim()
+    var value = document.getElementById("value").value.trim()
+    if (tag == "") {
+        request("\\search\\"+value, "GET", false, addresults)
+    } else {
+        request("\\search\\"+value+"\\"+tag, "GET", false, addresults)
+    }
+}
+
+function doquestions(search=true) {
+    var table = document.getElementById("selected")
+    var rows = [];
+	Array.from(table.children[0].children).forEach(function(rowhtml) {
+		row = [];
+		Array.from(rowhtml.children).forEach(function(itemhtml) {
+			row.push(itemhtml.innerHTML);
+		});
+		rows.push(row.slice(1));
+	});
+	rows = rows.slice(1);
+	if (search) {
+	    var url = new URL(window.location.href);
+	} else {
+	    var url = new URL(window.location.origin+"/practice");
+	}
+	url.searchParams.delete("page");
+	url.searchParams.delete("filters");
+	if (rows.length > 0) {
+	    url.searchParams.append("filters", JSON.stringify(rows));
+	};
+	if (url.href.length < 2000) {
+	    window.location.href = url.href;
+	} else {
+	    alert("Too many tags/values specified for search - please delete a few and try again.")
+	}
+}
+
+window.onload = function() {
+    var url = new URL(window.location.href);
+    var filters = url.searchParams.get("filters")
+    if (filters != null) {
+        filters = JSON.parse(filters);
+        filters.forEach(function(item) {
+            addrow("selected", item[0], item[1], "Delete Row")
+        })
+    }
+}
+</script>
+
+<section class="section">
+    <div class="container">
+
+        <h1 class="title">Questions</h1>
+
+        <h2 class="title is-4">Search</h2>
+
+        <h3 class="subtitle">Selected</h3>
+
+        <table id="selected" class="table is-bordered">
+        	<tr>
+        	    <thead>
+        		    <th></th>
+        		    <th>Tag</th>
+        		    <th>Value</th>
+        		</tbody>
+        	</tr>
+        </table>
+
+        <button type="button" class="button" onclick="doquestions(true)">Search questions</button>
+        <button type="button" class="button" onclick="doquestions(false)">Revise questions</button>
+
+        <br><br>
+
+        <h3 class="subtitle">Results</h3>
+
+        <div class="field">
+            <div class="control">
+                <input class="input" id="tag" placeholder="Tag (optional)">
+            </div>
+        </div>
+        <div class="field">
+            <div class="control">
+                <input class="input" id="value" placeholder="Value">
+            </div>
+        </div>
+        <button type="button" class="button" onclick="search()">Search for tags/values</button>
+
+        <br><br>
+
+        <table id="found" class="table is-bordered">
+        	<tr>
+        	    <thead>
+        		    <th></th>
+        		    <th>Tag</th>
+        		    <th>Value</th>
+        		</tbody>
+        	</tr>
+        </table>
+
+        <h2 class="title is-4">Results ({{total}} found, page {{page}}, {{questions|length}} displayed)</h2>
+
+        <nav class="pagination is-centered" role="navigation">
+            <a class="pagination-previous" href="questions?page={{page-1}}" {% if page <= 1 %}disabled{% endif %}>Previous page</a>
+            <a class="pagination-next" href="questions?page={{page+1}}" {% if questions|length < 10 or page*10 >= total %}disabled{% endif %}>Next page</a>
+            <ul class="pagination-list">
+                {% if page > 2 %}
+                <li><a class="pagination-link" href="questions?page=1">1</a></li>
+                {% endif %}
+                {% if page > 3 %}
+                <li><span class="pagination-ellipsis">&hellip;</span></li>
+                {% endif %}
+                {% if page > 1 %}
+                <li><a class="pagination-link" href="questions?page={{page-1}}">{{page-1}}</a></li>
+                {% endif %}
+                <li><a class="pagination-link is-current">{{page}}</a></li>
+                {% if (total/10)|int - page >= 0  %}
+                <li><a class="pagination-link" href="questions?page={{page+1}}">{{page+1}}</a></li>
+                {% endif %}
+                {% if (total/10)|int - page >= 2  %}
+                <li><span class="pagination-ellipsis">&hellip;</span></li>
+                {% endif %}
+                {% if (total/10)|int - page >= 1  %}
+                <li><a class="pagination-link" href="questions?page={{(total/10)|int}}">{{(total/10)|int}}</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+
+        {% for questionid, question in questions.items() %}
+        	<h3 class="title is-5">Question {{questionid}}</h3>
+        	{% if user.isadmin %}
+            	<button class="button" onclick="lockquestionfromediting({{questionid}},
+            	{% if questionid in locked %}
+            		true)">Unlock this question from editing
+            	{% else %}
+            		false)">Lock this question from editing
+            	{% endif %}
+            	</button>
+            	</br></br>
+            {% endif %}
+
+            <table id="selected" class="table is-bordered is-hoverable">
+        	    <tr>
+        	        <th>Verified</th>
+        		    <th>Revision</th>
+        		    {% if user.isadmin %}
+            		    <th></th>
+            		    <th></th>
+        		    {% endif %}
+        		</tr>
+        		{% for revisionid, questionobject in question.items() %}
+                <tr>
+                    <td>
+                        {% if questionobject.isverified %}
+                            <i class="fas fa-check" style="color: green;"></i>
+                        {% else %}
+                            <i class="fas fa-times" style="color: red;"></i>
+                        {% endif %}
+                    </td>
+                    <td><a href="viewquestion/{{questionid}}/{{revisionid}}">Revision {{revisionid}}</a></td>
+                    {% if user.isadmin %}
+                        <td>
+            			    <button class="button" onclick="deletequestion(this,
+            				{% if latest[questionid] == revisionid %}
+            					true)">Delete this revision
+            				{% else %}
+            					false)">Delete all revisions before this one
+            				{% endif %}
+            				</button>
+                        </td>
+                        <td>
+            			    <button class="button" onclick="verifyquestion(this,
+            				{% if questionobject.isverified %}
+            					true)">Deverify this revision
+            				{% else %}
+            					false)">Verify this revision
+            				{% endif %}
+            				</button>
+                        </td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+            </table>
+        {% endfor %}
+    </div>
+</section>

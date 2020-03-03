@@ -1,0 +1,106 @@
+{% include "head.html" %}
+
+<link rel="stylesheet" href="https://unpkg.com/easymde/dist/easymde.min.css">
+<script src="https://unpkg.com/easymde/dist/easymde.min.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/iframe-resizer/4.2.10/iframeResizer.min.js"></script>
+
+<style>
+.CodeMirror,
+.CodeMirror-scroll {
+    min-height: 0px;
+    max-height: 20vh;
+}
+</style>
+
+<script>
+function request(url, method, data=null, reload=true, callback=undefined) {
+	var xmlHttp = new XMLHttpRequest();
+	xmlHttp.onreadystatechange = function() {
+		if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
+		    if (reload) {
+			    location.reload();
+		    } else {
+		        callback(xmlHttp.responseText);
+		    }
+		};
+	}
+	xmlHttp.open(method, url, true);
+	xmlHttp.send(data);
+}
+
+window.onload = function() {
+    {% if user.isadmin %}
+    banreason = new EasyMDE({element: document.getElementById("banreason"), placeholder: "Enter ban reason here..."});
+    {% endif %}
+    iFrameResize({}, "#activitylog")
+    iFrameResize({}, "#comments")
+}
+
+{% if user.isadmin %}
+function ban() {
+    request('/ban/'+{{profile.userid}}, 'POST', banreason.value())
+}
+{% endif %}
+
+function toggletag(element) {
+    document.querySelectorAll(".tab").forEach(function(e) {
+        e.classList.remove("is-active");
+    });
+    element.parentNode.classList.add("is-active");
+    document.querySelectorAll(".tabcontent").forEach(function(e) {
+        e.style.display = "none";
+    });
+    document.getElementById(element.innerHTML).style.display = "block";
+}
+</script>
+
+<section class="section">
+    <div class="container">
+        <h1 class="title">
+            {% if profile.isbanned and user.isadmin %}<i class="fas fa-user-slash" style="color: red;"></i>{% endif %}
+            <span {% if profile.isbanned and user.isadmin %}style="text-decoration: line-through;"{% endif %}>
+                {{profile.username}}
+            </span>
+        </h1>
+
+        {% if profile.userid != user.userid %}
+            <button class="button" onclick="request('/follow/'+{{profile.userid}}, 'GET')">
+                {% if followed %}
+                Unfollow
+                {% else %}
+                Follow
+                {% endif %}
+            </button>
+        {% endif %}
+
+        {% if user.isadmin %}
+            {% if profile.userid != user.userid %}
+            </br></br>
+            {% endif %}
+            <textarea id="banreason"></textarea>
+            <button class="button" onclick="ban()">
+                {% if profile.isbanned %}
+                Unban
+                {% else %}
+                Ban
+                {% endif %}
+            </button>
+        {% endif %}
+
+        <div class="tabs">
+            <ul>
+                <li class="tab is-active"><a onclick="toggletag(this);">Activity log</a></li>
+                <li class="tab"><a onclick="toggletag(this);">Comments</a></li>
+            </ul>
+        </div>
+
+        <div id="Activity log" class="tabcontent">
+            <iframe id="activitylog" style="width:100%" src="/activitylog/{{profile.userid}}"></iframe>
+        </div>
+
+        <div id="Comments" class="tabcontent" style="display: none;">
+            <iframe id="comments" style="width:100%" src="/comments/profile/{{profile.userid}}"></iframe>
+        </div>
+    </div>
+</section>

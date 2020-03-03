@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<head>
+<meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+<meta content="utf-8" http-equiv="encoding">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.8.0/css/bulma.min.css">
+<script defer src="https://use.fontawesome.com/releases/v5.3.1/js/all.js"></script>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Wikiki/bulma-slider@1.0.0/dist/bulma-slider.min.css">
+<script src="/bundle.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/2.0.3/purify.min.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/iframe-resizer/4.2.10/iframeResizer.contentWindow.min.js"></script>
+
+<script>
+const setCookie = (name, value, days = 7, path = '/') => {
+    const expires = new Date(Date.now() + days * 864e5).toUTCString()
+    document.cookie = name + '=' + encodeURIComponent(value) + '; expires=' + expires + '; path=' + path
+}
+
+function getCookieValue(a) {
+    var b = document.cookie.match('(^|;^|[^;]+)\\s*' + a + '\\s*=\\s*([^;]+)');
+    return b ? b.pop() : '';
+}
+
+function request(url, method, reload=true, callback=undefined) {
+	var xmlHttp = new XMLHttpRequest();
+	xmlHttp.onreadystatechange = function() {
+		if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
+		    if (reload) {
+			    location.reload();
+		    } else {
+		        callback(xmlHttp.responseText);
+		    }
+		};
+	}
+	xmlHttp.open(method, url, true);
+	xmlHttp.send(null);
+}
+
+function post(url, data, callback) {
+	var xhr = new XMLHttpRequest();
+	xhr.open("POST", url, true);
+	xhr.setRequestHeader("Content-Type", "application/json");
+	xhr.onreadystatechange = function () {
+		if (xhr.readyState === 4 && xhr.status === 200) {
+			callback(JSON.parse(xhr.responseText));
+		}
+	};
+	var data = JSON.stringify(data);
+	xhr.send(data);
+}
+
+function submit() {
+    {% if type == "multiplechoice" %}
+    try {
+        var data = {"multiplechoice":document.querySelector('input[name="multiplechoice"]:checked').value};
+    } catch {}
+    {% elif type == "written" %}
+    var data = document.getElementById("answer").value
+    if (data.trim() == "") {
+        data = undefined
+    }
+    data = {"answer":data}
+    {% endif %}
+    if (data != undefined) {
+        post(window.location.href, data, function(response) {
+            if (response["valid"]) {
+                {% if type == "multiplechoice" %}
+                var text, category
+                if (response["correct"]) {
+                    text = "Correct!"
+                    category = "is-success"
+                } else {
+                    text = "Incorrect, the correct answer was "+document.getElementById(response["correctanswer"]).innerHTML
+                    category = "is-danger"
+                }
+                document.getElementById("message").innerHTML += text
+                document.getElementById("message").classList.add(category)
+                {% elif type == "written" %}
+                attemptid = response["attemptid"]
+                document.getElementsByClassName("message-body")[0].innerHTML = DOMPurify.sanitize(md.render(response["markscheme"]));
+                document.getElementById("givemarks").style.display = "block"
+                {% endif %}
+                document.getElementById("message").style.display = "block"
+                parent.postMessage(response, "*");
+            } else {
+                alert("An error occured: "+response["message"])
+            }
+        });
+    } else {
+        alert("Please select an answer before continuing.")
+    }
+}
+
+window.onload = function() {
+    document.getElementById("question").innerHTML = DOMPurify.sanitize(md.render({{question|tojson}}));
+    {% if type == "multiplechoice" %}
+    var choices = document.getElementById("choices");
+    for (var i = choices.children.length; i >= 0; i--) {
+        choices.appendChild(choices.children[Math.random() * i | 0]);
+    }
+    Array.from(document.getElementsByClassName("multiplechoicetext")).forEach(function(item) {
+        item.innerHTML = DOMPurify.sanitize(md.renderInline(item.innerHTML));
+    });
+    {% endif %}
+
+}
+
+{% if type == "written" %}
+function showvalue(value) {
+    var text
+    if (value == 1) {
+        text = "Give 1 mark"
+    } else {
+        text = "Give "+value+" marks"
+    }
+    document.getElementById("givemarksbutton").innerHTML = text;
+}
+
+function submitmark() {
+    request("/setmark/"+attemptid+"/"+document.getElementById("marks").value, "GET", false, function() {
+       alert("Successfully changed mark")
+    });
+}
+{% endif %}
+</script>
+</head>
+
+{% if type == "multiplechoice" %}
+<div id="message" style="display: none;" class="notification"><button class="delete" onclick="this.parentElement.outerHTML = ''"></button></div>
+{% elif type == "written" %}
+<article id="message" class="message is-dark" style="display: none;">
+  <div class="message-header">
+    <p>Mark scheme</p>
+    <button class="delete" aria-label="delete" onclick="this.parentElement.parentElement.outerHTML = ''"></button>
+  </div>
+  <div class="message-body">
+  </div>
+</article>
+
+<div id="givemarks" style="display: none;">
+<b>Marks:</b>
+</br>
+<input id="marks" class="slider is-fullwidth" oninput="showvalue(this.value)" class="slider is-fullwidth" max="1" value="1" type="range">
+<button id="givemarksbutton" class="button" onclick="submitmark()">Give 1 mark</button>
+</div>
+</br>
+{% endif %}
+
+<p id="question"></p>
+</br>
+
+{% if type == "multiplechoice" %}
+<div id="choices">
+{% for choice in choices %}
+    <div><input type="radio" name="multiplechoice" value="{{loop.index0 + 1}}">&nbsp;<span id="{{loop.index0 + 1}}" class="multiplechoicetext">{{choice}}</span><br></div>
+{% endfor %}
+</div>
+{% elif type == "written" %}
+<textarea class="textarea" id="answer"></textarea>
+{% endif %}
+
+</br>
+<button class="button" onclick="submit(); this.disabled = true; return false;">Submit answer</button>

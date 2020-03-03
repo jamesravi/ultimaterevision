@@ -1,0 +1,100 @@
+{% include "head.html" %}
+
+<script>
+function request(url, method, data=null, reload=true, callback=undefined) {
+	var xmlHttp = new XMLHttpRequest();
+	xmlHttp.onreadystatechange = function() {
+		if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
+		    if (reload) {
+			    location.reload();
+		    } else {
+		        callback(xmlHttp.responseText);
+		    }
+		};
+	}
+	xmlHttp.open(method, url, true);
+	xmlHttp.send(data);
+}
+
+window.addEventListener("load", function(event) {
+    table = document.getElementById("progress").getElementsByTagName("tbody")[0];
+    var practice = document.getElementById("practice");
+    var result = getCookieValue("questioncache").split(".").filter(function(item) { return item.trim() != "" });
+    if (result.length == 0) {
+        practice.innerHTML = "You can start a practice session on the <a href='/questions'>questions page</a>.";
+    } else {
+        practice.innerHTML = "It looks like you have a practice session in progress. Would you like to <a href='/practice'>continue it</a>?";
+    }
+    loadprogressfortag(document.getElementById("progresstag"))
+
+    var message = ""
+    var now = new Date()
+    var hours = now.getHours()
+    if (hours < 12) {
+        message += "Good morning"
+    } else if (hours < 18) {
+        message += "Good afternoon"
+    } else {
+        message += "Good evening"
+    }
+    message += ", {{user.username}}!"
+    document.getElementById("greeting").innerHTML = message
+}, false);
+
+function loadprogressfortag(element) {
+    table.innerHTML = ""
+    var tag = element.options[element.selectedIndex].value;
+    request("/progress/"+tag, "GET", null, false, function(resp) {
+        resp = JSON.parse(resp)
+        Object.keys(resp).forEach(function(item) {
+            addrow(item, (resp[item]*100)+"%");
+        })
+    });
+}
+
+function addrow(first, second) {
+	var row = table.insertRow(-1);
+
+	var cell0 = row.insertCell(0);
+	var cell1 = row.insertCell(1);
+
+	cell0.innerHTML = first;
+	cell1.innerHTML = second;
+}
+</script>
+
+<section class="section">
+    <div class="container">
+        <h1 class="title" id="greeting"></h1>
+        </br>
+        <h2 class="subtitle">Practice</h2>
+        <p id="practice"></p>
+        </br>
+        <h2 class="subtitle">XP and Reputation</h2>
+        <p>You have {{xprep["xp"]}} XP, and you are on XP level {{xprep["xplevel"]|int}}, only {{xprep["xptonextlevel"]}} XP to the next level</p>
+        <progress class="progress is-warning" value="{{xprep["xplevel"] - xprep["xplevel"]|int}}" max="1"></progress>
+        <p>You have {{xprep["rep"]}} REP, and you are on REP level {{xprep["replevel"]|int}}, only {{xprep["reptonextlevel"]}} REP to the next level</p>
+        <progress class="progress is-link" value="{{xprep["replevel"] - xprep["replevel"]|int}}" max="1"></progress>
+        </br>
+        <h2 class="subtitle">Progress</h2>
+
+        Tag:
+        <select onchange="loadprogressfortag(this)" id="progresstag">
+            {% for tag in tags %}
+            <option value="{{ tag }}">{{ tag }}</option>
+            {% endfor %}
+        </select>
+
+        <br><br>
+
+        <table id="progress" class="table is-bordered">
+        	<tr>
+        	    <thead>
+        		    <th>Value</th>
+        		    <th>Progress</th>
+        		</thead>
+        		<tbody></tbody>
+        	</tr>
+        </table>
+    </div>
+</section>

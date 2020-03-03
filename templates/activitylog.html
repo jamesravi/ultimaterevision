@@ -1,0 +1,64 @@
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.8.0/css/bulma.min.css">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/iframe-resizer/4.2.10/iframeResizer.contentWindow.min.js"></script>
+
+<script>
+window.onload = function() {
+    Array.from(document.querySelectorAll(".list")).forEach(function(list) {
+        var duplicates = [];
+        Array.from(list.children).forEach(function(item) {
+            if (duplicates.includes(item.innerHTML)) {
+                item.outerHTML = "";
+            }
+            duplicates.push(item.innerHTML)
+        });
+        var header = list.previousElementSibling.getElementsByTagName("span")[0]
+        var headertext = header.innerHTML.trim()
+        headertext = headertext.split(" ")
+        headertext[1] = list.children.length
+        headertext = headertext.join(" ")
+        if (list.children.length == 1) {
+            headertext = headertext.slice(0, -1)
+        }
+        header.innerHTML = headertext
+    });
+}
+</script>
+
+{% for date, dalist in log.items()|sort|reverse %}
+    <h2 class="subtitle is-4">{{date}}</h2>
+    {% for key, headeritems in dalist.items() %}
+        {% for auser, items in headeritems.items() %}
+            <h3 class="subtitle is-5">
+            <a target="_parent" href="/profile/{{auser.userid}}">{{auser.username}}</a>
+            <span>
+            {% if key == "questions" %}
+                added/edited {{items|length}} {{key}}
+            {% elif key == "attempts" %}
+                attempted {{items|length}} questions
+            {% elif key == "comments" %}
+                left {{items|length}} {{key}}
+            {% elif key == "followers" %}
+                followed {{items|length}} peoples
+            {% endif %}
+            </span>
+            </h3>
+            <div class="list">
+                {% for item in items %}
+                    <div class="list-item">
+                    {% if key == "questions" or key == "attempts" or (key == "comments" and item.questionid != None) %}
+                        <a target="_parent" href="/viewquestion/{{item.questionid}}/{{item.revisionid}}">Question {{item.questionid}} (revision {{item.revisionid}})</a>
+                    {% elif item.followinguserid != None and item.followinguserid %}
+                        <a target="_parent" href="/profile/{{item.userid}}">{{item.follower.username}}</a> followed <a target="_parent" href="/profile/{{item.followinguserid}}">{{item.followered.username}}</a>
+                    {% elif item.attemptid != None and item.attemptid %}
+                        <a target="_parent" href="/attempt/{{item.attemptid}}">Attempt by {{item.user.username}} on question {{item.attempt.questionid}} (revision {{item.attempt.revisionid}})</a>
+                    {% elif key == "comments" and item.profileid != None %}
+                        <a target="_parent" href="/profile/{{item.profileid}}">User {{item.profile.username}}</a>
+                    {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+            </br>
+        {% endfor %}
+    {% endfor %}
+{% endfor %}

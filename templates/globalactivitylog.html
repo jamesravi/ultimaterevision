@@ -1,0 +1,15 @@
+{% include "head.html" %}
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/iframe-resizer/4.2.10/iframeResizer.min.js"></script>
+
+<script>
+window.onload = function() {
+    iFrameResize({}, "#activitylog")
+}
+</script>
+
+<section class="section">
+    <div class="container">
+        <iframe id="activitylog" style="width:100%" src="/activitylog"></iframe>
+    </div>
+</section>
