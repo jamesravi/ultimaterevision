@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.8.0/css/bulma.min.css">
 <script defer src="https://use.fontawesome.com/releases/v5.3.1/js/all.js"></script>
-
+{% include "analytics.html" %}
 <script>
 const setCookie = (name, value, days = 7, path = '/') => {
     const expires = new Date(Date.now() + days * 864e5).toUTCString()
@@ -35,7 +35,9 @@ function getCookieValue(a) {
           <a class="navbar-item" href="/profile/{{user.userid}}">Your profile</a>
           <a class="navbar-item" href="/questions">Questions</a>
           <a class="navbar-item" href="/addquestion">Add a question</a>
-          <a class="navbar-item" href="/users">Users</a>
+          {% if user.isadmin %}
+            <a class="navbar-item" href="/users">Users</a>
+          {% endif %}
           <a class="navbar-item" href="/globalactivitylog">Global activity log</a>
           <a class="navbar-item" href="/notifications">Notifications</a>
         </div>

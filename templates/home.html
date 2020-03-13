@@ -25,7 +25,9 @@ window.addEventListener("load", function(event) {
     } else {
         practice.innerHTML = "It looks like you have a practice session in progress. Would you like to <a href='/practice'>continue it</a>?";
     }
-    loadprogressfortag(document.getElementById("progresstag"))
+    try {
+        loadprogressfortag(document.getElementById("progresstag"))
+    } catch {}
 
     var message = ""
     var now = new Date()

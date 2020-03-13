@@ -60,6 +60,7 @@ function post(url, data, callback) {
 
 window.onload = function() {
     submitcommentbox = new EasyMDE({element: document.getElementById("value"), placeholder: "Add a comment...", previewRender: function(plainText){return md.render(plainText)}});
+    md.disable("image")
     Array.from(document.getElementsByClassName("commenttext")).forEach(function(item){
         item.innerHTML = DOMPurify.sanitize(md.render(item.innerHTML));
     });

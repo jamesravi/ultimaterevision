@@ -136,5 +136,9 @@ def notifications():
 @app.route("/users")
 def viewusers():
     """Endpoint to view a list of users on the site"""
-    users = User.query.order_by(User.timesignedup.desc()).all()
-    return render_template("users.html", users=users)
+    user = getuser()
+    if user.isadmin:
+        users = User.query.order_by(User.timesignedup.desc()).all()
+        return render_template("users.html", users=users)
+    else:
+        abort(404)
