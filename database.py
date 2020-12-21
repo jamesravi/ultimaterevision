@@ -54,11 +54,6 @@ class Question(db.Model):
     timestampadded = db.Column(db.DateTime, default=datetime.datetime.utcnow)
     isverified = db.Column(db.Boolean, nullable=False, default=False)
 
-class LockedFromEditing(db.Model):
-    __tablename__ = "lockedquestions"
-    questionid = db.Column(db.Integer, nullable=False, primary_key=True)
-    lockedfromediting = db.Column(db.Boolean, nullable=False, default=False, primary_key=True)
-
 class Tag(db.Model):
     __tablename__ = "tags"
     tagid = db.Column(db.Integer, primary_key=True)
@@ -80,46 +75,3 @@ class Attempt(db.Model):
     useranswers = db.Column(db.Text(65565))
     marks = db.Column(db.Integer, default=1)
     user = db.relationship(User)
-
-class Comment(db.Model):
-    __tablename__ = "comments"
-    commentid = db.Column(db.Integer, primary_key=True)
-    questionid = db.Column(db.Integer)
-    revisionid = db.Column(db.Integer)
-    profileid = db.Column(db.Integer, db.ForeignKey("users.userid"))
-    attemptid = db.Column(db.Integer, db.ForeignKey("attempts.attemptid"))
-    timewritten = db.Column(db.DateTime, default=datetime.datetime.utcnow)
-    replytocommentid = db.Column(db.Integer, db.ForeignKey("comments.commentid"))
-    userid = db.Column(db.Integer, db.ForeignKey("users.userid"), nullable=False, default=getuserid)
-    content = db.Column(db.Text(65565), nullable=False)
-    user = db.relationship(User, primaryjoin=userid==User.userid)
-    profile = db.relationship(User, primaryjoin=profileid==User.userid)
-    attempt = db.relationship(Attempt)
-
-class Vote(db.Model):
-    __tablename__ = "votes"
-    voteid = db.Column(db.Integer, primary_key=True)
-    userid = db.Column(db.Integer, db.ForeignKey("users.userid"), nullable=False, default=getuserid)
-    commentid = db.Column(db.Integer, db.ForeignKey("comments.commentid"))
-    questionid = db.Column(db.Integer)
-    revisionid = db.Column(db.Integer)
-    profileid = db.Column(db.Integer, db.ForeignKey("users.userid"))
-    attemptid = db.Column(db.Integer, db.ForeignKey("attempts.attemptid"))
-    islike = db.Column(db.Boolean, nullable=False, default=False)
-    isdislike = db.Column(db.Boolean, nullable=False, default=False)
-    isreport = db.Column(db.Boolean, nullable=False, default=False)
-
-class Follower(db.Model):
-    __tablename__ = "followers"
-    followerid = db.Column(db.Integer, primary_key=True)
-    timefollowed = db.Column(db.DateTime, default=datetime.datetime.utcnow)
-    userid = db.Column(db.Integer, db.ForeignKey("users.userid"), nullable=False, default=getuserid)
-    followinguserid = db.Column(db.Integer, db.ForeignKey("users.userid"), nullable=False)
-    follower = db.relationship(User, primaryjoin=userid==User.userid)
-    followered = db.relationship(User, primaryjoin=followinguserid==User.userid)
-
-class ReadNotification(db.Model):
-    __tablename__ = "readnotifications"
-    readnotificationid = db.Column(db.Integer, primary_key=True)
-    userid = db.Column(db.Integer, db.ForeignKey("users.userid"), nullable=False, default=getuserid)
-    commentid = db.Column(db.Integer, db.ForeignKey("comments.commentid"), nullable=False)

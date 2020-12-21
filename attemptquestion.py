@@ -172,39 +172,6 @@ def getxprepforuser(userid):
     rep = Question.query.filter_by(userid=userid, isverified=True).count()
     # number of followers the user has
     rep += Follower.query.filter_by(followinguserid=userid).count()
-    # everything the user has disliked
-    try:
-        rep += Vote.query.with_entities(func.sum(Vote.isdislike).label("sum")).filter_by(userid=userid).first()[0]
-    except TypeError:
-        pass
-    # votes on the user's profile page
-    try:
-        rep += Vote.query.with_entities(func.sum(Vote.islike).label("sum")).filter_by(profileid=userid).first()[0]
-    except TypeError:
-        pass
-    try:
-        rep -= Vote.query.with_entities(func.sum(Vote.isdislike).label("sum")).filter_by(profileid=userid).first()[0]
-    except TypeError:
-        pass
-    try:
-        rep -= Vote.query.with_entities(func.sum(Vote.isreport).label("sum")).filter_by(profileid=userid).first()[0]
-    except TypeError:
-        pass
-    # votes on the user's attempts
-    attempts = db.session.query(Vote, Attempt).join(Attempt, Vote.attemptid==Attempt.attemptid).filter(Attempt.userid==userid)
-    rep += attempts.filter(Vote.islike==True).count()
-    rep -= attempts.filter(Vote.isdislike==True).count()
-    rep -= attempts.filter(Vote.isreport==True).count()
-    # votes on the user's comments
-    comments = db.session.query(Vote, Comment).join(Comment, Vote.commentid==Comment.commentid).filter(Comment.userid==userid)
-    rep += comments.filter(Vote.islike==True).count()
-    rep -= comments.filter(Vote.isdislike==True).count()
-    rep -= comments.filter(Vote.isreport==True).count()
-    # votes on the user's questions they added/edited
-    questions = db.session.query(Vote, Question).filter(Vote.questionid==Question.questionid).filter(Vote.revisionid==Question.revisionid).filter(Question.userid==userid)
-    rep += questions.filter(Vote.islike==True).count()
-    rep -= questions.filter(Vote.isdislike==True).count()
-    rep -= questions.filter(Vote.isreport==True).count()
 
     if rep < 0:
         rep = 0
@@ -215,13 +182,12 @@ def getxprepforuser(userid):
     "rep":rep, "replevel":replevelstats[0], "reptonextlevel":replevelstats[1]}
     return result
 
-@app.route("/home")
+@app.route("/")
 def home():
     """Endpoint for the homepage."""
     user = getuser()
     tags = [item[0] for item in db.session.query(Tag.tag).filter(~Tag.tag.in_(["question", "choices", "answerindex"])).group_by(Tag.tag).order_by(desc(func.count(Tag.tag))).all()]
-    xprep = getxprepforuser(user.userid)
-    return render_template("home.html", tags=tags, xprep=xprep)
+    return render_template("home.html", tags=tags)
 
 def variancelike(scores):
     """Returns a score reflecting how variable the values passed in to the function are."""

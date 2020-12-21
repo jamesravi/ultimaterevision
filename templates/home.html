@@ -33,13 +33,12 @@ window.addEventListener("load", function(event) {
     var now = new Date()
     var hours = now.getHours()
     if (hours < 12) {
-        message += "Good morning"
+        message += "Good morning!"
     } else if (hours < 18) {
-        message += "Good afternoon"
+        message += "Good afternoon!"
     } else {
-        message += "Good evening"
+        message += "Good evening!"
     }
-    message += ", {{user.username}}!"
     document.getElementById("greeting").innerHTML = message
 }, false);
 
@@ -71,12 +70,6 @@ function addrow(first, second) {
         </br>
         <h2 class="subtitle">Practice</h2>
         <p id="practice"></p>
-        </br>
-        <h2 class="subtitle">XP and Reputation</h2>
-        <p>You have {{xprep["xp"]}} XP, and you are on XP level {{xprep["xplevel"]|int}}, only {{xprep["xptonextlevel"]}} XP to the next level</p>
-        <progress class="progress is-warning" value="{{xprep["xplevel"] - xprep["xplevel"]|int}}" max="1"></progress>
-        <p>You have {{xprep["rep"]}} REP, and you are on REP level {{xprep["replevel"]|int}}, only {{xprep["reptonextlevel"]}} REP to the next level</p>
-        <progress class="progress is-link" value="{{xprep["replevel"] - xprep["replevel"]|int}}" max="1"></progress>
         </br>
         <h2 class="subtitle">Progress</h2>
 

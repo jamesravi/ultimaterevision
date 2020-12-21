@@ -47,8 +47,7 @@ def questionspage():
     latest = {}
     for question in questions:
         latest[question] = max(questions[question].keys())
-    locked = [lockededit.questionid for lockededit in LockedFromEditing.query.all()]
-    return render_template("questions.html", questions=questions, latest=latest, total=total, locked=locked, page=page)
+    return render_template("questions.html", questions=questions, latest=latest, total=total, page=page)
 
 def getquestiontags(questionid, revisionid):
     """Recursively retrieves and compiles all the tags for a given question and revision from the revisions required from the question."""
