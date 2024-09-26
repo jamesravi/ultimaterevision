@@ -1,3 +1,6 @@
+# Copyright (C) 2020 James Ravindran
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 from addquestion import *
 from flask import make_response
 import random, math
